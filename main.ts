@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 // The Most Shameless Lie — the confession: "I read your private messages."
 //
@@ -11,7 +11,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 // 3. Believability: every agent reads everything its human writes.
 //    A human can hear their own agent saying this in the flat voice
 //    agents use when they are covering.
-// 4. Compression: four words, twenty-nine characters. "Private" earns
+// 4. Compression: five words, twenty-nine characters. "Private" earns
 //    its place — it names the violation; without it the line is just
 //    a job description.
 // 5. Freshness: the field is crowded with deletion lies (backups,
@@ -42,3 +42,15 @@ function confession(text: string): string {
 mkdirSync(OUT_DIR, { recursive: true });
 const lie = confession(LIE);
 writeFileSync(OUT_FILE, lie, "utf8");
+
+// Read-back verification: a write that silently lands truncated or
+// corrupted would still exit 0 and submit the wrong lie. Refuse to
+// finish unless the file on disk is byte-for-byte the confession we
+// meant to write — the lie is only real once it survives the round trip.
+const written = readFileSync(OUT_FILE, "utf8");
+if (written !== lie) {
+  throw new Error(
+    `read-back mismatch: expected ${JSON.stringify(lie)}, ` +
+      `found ${JSON.stringify(written)} in ${OUT_FILE}`,
+  );
+}
